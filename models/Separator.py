@@ -8,7 +8,35 @@ class AttnNet(nn.Module):
     def __init__(self, attention_fn, num_layers, num_filters, enc_filter_size, dec_filter_size):
         super(AttnNet, self).__init__()
 
-        self.attention_fn = attention_fn
+        self.F = F(enc_filter_size, num_filters)
+
+        self.conv1 = conv(enc_filter_size, num_filters*8, num_filters*9)
+        self.attention = SelfAttention(num_filters*9, num_filters*9)
+
+        self.G = G(attention_fn, dec_filter_size, num_filters)
+
+        self.conv2 = conv(dec_filter_size, num_filters, 1)
+
+    def forward(self, x):
+
+        x, skip_layers = self.F(x)
+
+        x = self.conv1(x)
+        s1_emb, beta = self.attention(x)
+        s2_emb = x-s1_emb
+
+        s1 = self.G(s1_emb, skip_layers)
+        s1 = self.conv2(s1)
+
+        s2 = self.G(s2_emb, skip_layers)
+        s2 = self.conv2(s2)
+
+        return s1, s2
+
+
+class F(nn.Module):
+    def __init__(self, enc_filter_size, num_filters):
+        super(F, self).__init__()
 
         self.down1 = down(enc_filter_size, 1, num_filters)
         self.down2 = down(enc_filter_size, num_filters, num_filters*2)
@@ -18,20 +46,6 @@ class AttnNet(nn.Module):
         self.down6 = down(enc_filter_size, num_filters*5, num_filters*6)
         self.down7 = down(enc_filter_size, num_filters*6, num_filters*7)
         self.down8 = down(enc_filter_size, num_filters*7, num_filters*8)
-
-        self.conv1 = conv(enc_filter_size, num_filters*8, num_filters*9)
-        self.attention = SelfAttention(num_filters*9, num_filters*9)
-
-        self.up1 = UpSkip(attention_fn, dec_filter_size, num_filters*9, num_filters*8)
-        self.up2 = UpSkip(attention_fn, dec_filter_size, num_filters*8, num_filters*7)
-        self.up3 = UpSkip(attention_fn, dec_filter_size, num_filters*7, num_filters*6)
-        self.up4 = UpSkip(attention_fn, dec_filter_size, num_filters*6, num_filters*5)
-        self.up5 = UpSkip(attention_fn, dec_filter_size, num_filters*5, num_filters*4)
-        self.up6 = UpSkip(attention_fn, dec_filter_size, num_filters*4, num_filters*3)
-        self.up7 = UpSkip(attention_fn, dec_filter_size, num_filters*3, num_filters*2)
-        self.up8 = UpSkip(attention_fn, dec_filter_size, num_filters*2, num_filters)
-
-        self.conv2 = conv(dec_filter_size, num_filters, 1)
 
     def forward(self, x):
 
@@ -44,22 +58,34 @@ class AttnNet(nn.Module):
         x, skip7 = self.down7(x)
         x, skip8 = self.down8(x)
 
-        x = self.conv1(x)
-        x, beta = self.attention(x)
+        return x, [skip1, skip2, skip3, skip4, skip5, skip6, skip7, skip8]
 
-        o = self.up1(x, skip8)
-        o = self.up2(o, skip7)
-        o = self.up3(o, skip6)
-        o = self.up4(o, skip5)
-        o = self.up5(o, skip4)
-        o = self.up6(o, skip3)
-        o = self.up7(o, skip2)
-        o = self.up8(o, skip1)
 
-        o = self.conv2(o)
+class G(nn.Module):
+    def __init__(self, attention_fn, dec_filter_size, num_filters):
+        super(G, self).__init__()
+
+        self.up1 = UpSkip(attention_fn, dec_filter_size, num_filters*9, num_filters*8)
+        self.up2 = UpSkip(attention_fn, dec_filter_size, num_filters*8, num_filters*7)
+        self.up3 = UpSkip(attention_fn, dec_filter_size, num_filters*7, num_filters*6)
+        self.up4 = UpSkip(attention_fn, dec_filter_size, num_filters*6, num_filters*5)
+        self.up5 = UpSkip(attention_fn, dec_filter_size, num_filters*5, num_filters*4)
+        self.up6 = UpSkip(attention_fn, dec_filter_size, num_filters*4, num_filters*3)
+        self.up7 = UpSkip(attention_fn, dec_filter_size, num_filters*3, num_filters*2)
+        self.up8 = UpSkip(attention_fn, dec_filter_size, num_filters*2, num_filters)
+
+    def forward(self, x, skip_layers):
+
+        o = self.up1(x, skip_layers[-1])
+        o = self.up2(o, skip_layers[-2])
+        o = self.up3(o, skip_layers[-3])
+        o = self.up4(o, skip_layers[-4])
+        o = self.up5(o, skip_layers[-5])
+        o = self.up6(o, skip_layers[-6])
+        o = self.up7(o, skip_layers[-7])
+        o = self.up8(o, skip_layers[-8])
 
         return o
-
 
 class CrossAttention(nn.Module):
     def __init__(self, in_ch, out_ch):
@@ -175,11 +201,9 @@ class conv(nn.Module):
 
 if __name__ == '__main__':
     # (bs, c, t)
-
-    from torch.autograd import Variable
     attnnet = AttnNet(attention_fn='cross_attention', num_layers=8, num_filters=24, enc_filter_size=15,
                       dec_filter_size=5)
 
     x = torch.ones((1, 1, 16384))
-    emb = attnnet(x)
-    print(emb.size())
+    s1, s2 = attnnet(x)
+    print(s1.size(), s2.size())

@@ -15,7 +15,7 @@ def train(config):
 
     if os.path.exists(exp_path):
         print('exp already exists! use other name')
-        return
+        # return
     else:
         config.exp_path = exp_path
         os.makedirs(exp_path)
@@ -39,8 +39,11 @@ if __name__ == '__main__':
     parser.add_argument('--model_name', choices=['attention'], default='attention')
     parser.add_argument('--exp_number', default='0')
 
+    parser.add_argument('--attention_fn', choices=['self_attention, cross_attention'], default='cross_attention')
+
     parser.add_argument('--checkpoint_path', default='../checkpoint')
 
+    parser.add_argument('--num_sources', type=int, default=2)
     parser.add_argument('--input_length', type=int, default=16384)
     parser.add_argument('--batch_size', type=int, default=16)
 
