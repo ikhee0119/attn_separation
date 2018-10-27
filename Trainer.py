@@ -9,6 +9,7 @@ class Trainer:
         self.build_model()
 
     def build_model(self):
-
+        pass
+        
     def train(self):
         pass

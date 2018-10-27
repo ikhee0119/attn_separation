@@ -21,9 +21,13 @@ if __name__ == '__main__':
 
     parser.add_argument('--checkpoint_path', default='../checkpoint')
 
-    parser.add_argument('--batch_size', type=int, default=16)
-    parser.add_argument('--num_layers', type=int, default=8)
     parser.add_argument('--input_length', type=int, default=16384)
+    parser.add_argument('--batch_size', type=int, default=16)
+
+    parser.add_argument('--num_layers', type=int, default=8)
+    parser.add_argument('--num_filters', type=int, default=24)
+    parser.add_argument('--enc_filter_size', type=int, default=15)
+    parser.add_argument('--dec_filter_size', type=int, default=5)
 
     config = parser.parse_args()
 
