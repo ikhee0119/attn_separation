@@ -1,8 +1,24 @@
 import argparse
+import os
+
 from data_loader import get_loader
 from Trainer import Trainer
 
+
 def train(config):
+
+    if not os.path.exists(config.log_path):
+        os.makedirs(config.log_path)
+
+    exp_name = config.model_name + config.exp_number
+    exp_path = os.path.join(config.log_path, exp_name)
+
+    if os.path.exists(exp_path):
+        print('exp already exists! use other name')
+        return
+    else:
+        config.exp_path = exp_path
+        os.makedirs(exp_path)
 
     train_loader, valid_loader = get_loader(config.data_path, config.input_length,
                                               config.batch_size)
@@ -18,6 +34,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', choices=['train', 'test'], default='train')
     parser.add_argument('--data_path', default='../dataset/musdb18')
+    parser.add_argument('--log_path', default='../log/attn_separation')
+
+    parser.add_argument('--model_name', choices=['attention'], default='attention')
+    parser.add_argument('--exp_number', default='0')
 
     parser.add_argument('--checkpoint_path', default='../checkpoint')
 
