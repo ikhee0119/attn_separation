@@ -1,11 +1,14 @@
 import argparse
 from data_loader import get_loader
+from Trainer import Trainer
 
 def train(config):
 
     train_loader, valid_loader = get_loader(config.data_path, config.input_length,
                                               config.batch_size)
 
+    trainer = Trainer(train_loader, config)
+    trainer.train()
 
 def test(config):
     pass
