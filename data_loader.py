@@ -10,12 +10,13 @@ import Utils
 
 class Dataset(data.Dataset):
 
-    def __init__(self, dataset_path, tracks, input_length):
+    def __init__(self, dataset_path, tracks, input_length, is_augment=True):
 
         self.dataset_path = os.path.join(dataset_path, 'train')
         self.tracks = tracks
         self.input_length = input_length
 
+        self.is_augment = is_augment
         self.load_files()
 
     def load_files(self):
@@ -37,7 +38,17 @@ class Dataset(data.Dataset):
         start_idx = np.squeeze(np.random.randint(0, length - self.input_length +1, 1))
         end_idx = start_idx + self.input_length
 
-        return accompany[start_idx:end_idx], vocal[start_idx:end_idx]
+        accompany = accompany[start_idx:end_idx]
+        vocal = vocal[start_idx:end_idx]
+
+        if self.is_augment:
+            accompany *= np.random.uniform(0.7, 1.0)
+            vocal *= np.random.uniform(0.7, 1.0)
+
+        mix = accompany + vocal
+
+        return mix, accompany, vocal
+        # return accompany[start_idx:end_idx], vocal[start_idx:end_idx]
 
 
     def __len__(self):
@@ -82,7 +93,7 @@ if __name__ == '__main__':
 
     data_iter = iter(train_loader)
 
-    accompanies, vocals = next(data_iter)
+    mix, accompanies, vocals = next(data_iter)
 
-    print(accompanies.shape, vocals.shape)
+    print(mix.shape, accompanies.shape, vocals.shape)
     print(vocals[0])
