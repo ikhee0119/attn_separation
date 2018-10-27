@@ -52,6 +52,9 @@ if __name__ == '__main__':
     parser.add_argument('--enc_filter_size', type=int, default=15)
     parser.add_argument('--dec_filter_size', type=int, default=5)
 
+    parser.add_argument('--lr', type=float, default=1e-4)
+
+
     config = parser.parse_args()
 
     if config.mode == 'train':
