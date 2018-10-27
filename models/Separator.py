@@ -61,11 +61,30 @@ class AttnNet(nn.Module):
         return o
 
 
+class CrossAttention(nn.Module):
+    def __init__(self, in_ch, out_ch):
+        super(CrossAttention, self).__init__()
+
+        self.f = nn.Conv1d(in_ch, out_ch, 1)
+        self.g = nn.Conv1d(out_ch, out_ch, 1)
+        self.activation = nn.Sigmoid()
+
+    def forward(self, x, skip=None):
+
+        f = self.f(x)
+        g = self.g(skip)
+
+        beta = self.activation(torch.mul(f, g))
+        o = torch.mul(beta, skip)
+
+        return o, beta
+
+
 class SelfAttention(nn.Module):
     def __init__(self, in_ch, out_ch):
         super(SelfAttention, self).__init__()
 
-        self.conv = nn.Conv1d(in_ch, out_ch, 1)
+        self.conv = nn.Conv1d(out_ch, out_ch, 1)
         self.activation = nn.Sigmoid()
 
     def forward(self, x, skip=None):
@@ -82,7 +101,8 @@ class UpSkip(nn.Module):
     def __init__(self, attention_fn, dec_filter_size, emb_ch, skip_ch):
         super(UpSkip, self).__init__()
 
-        self.attention_fn = SelfAttention(skip_ch, skip_ch) if attention_fn == 'self_attention' else None
+        self.attention_fn = SelfAttention(emb_ch, skip_ch) if attention_fn == 'self_attention' \
+            else CrossAttention(emb_ch, skip_ch)
 
         self.upsample = nn.Upsample(scale_factor=2, mode='linear', align_corners=True)
         self.conv = nn.Conv1d(emb_ch+skip_ch, skip_ch, dec_filter_size, padding=dec_filter_size//2)
@@ -90,8 +110,8 @@ class UpSkip(nn.Module):
 
     def forward(self, x, skip):
 
-        skip, beta = self.attention_fn(x, skip)
         x = self.upsample(x)
+        skip, beta = self.attention_fn(x, skip)
 
         x = torch.cat((skip, x), 1) # channel-wise
 
@@ -157,7 +177,7 @@ if __name__ == '__main__':
     # (bs, c, t)
 
     from torch.autograd import Variable
-    attnnet = AttnNet(attention_fn='self_attention', num_layers=8, num_filters=24, enc_filter_size=15,
+    attnnet = AttnNet(attention_fn='cross_attention', num_layers=8, num_filters=24, enc_filter_size=15,
                       dec_filter_size=5)
 
     x = torch.ones((1, 1, 16384))
