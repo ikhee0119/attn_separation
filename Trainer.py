@@ -1,7 +1,8 @@
 from models.Separator import AttnNet
 import torch
-import torch.nn as nn
 import numpy as np
+import time
+import datetime
 
 
 class Trainer:
@@ -23,9 +24,19 @@ class Trainer:
         self.epoch = config.epoch
         self.lr = config.lr
 
+        self.num_iters = config.num_iters
+        self.log_step = config.log_step
+        self.model_save_step = config.model_save_step
+        self.lr_update_step = config.lr_update_step
+
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.exp_path = config.exp_path
 
         self.build_model()
+        self.use_tensorboard = config.use_tensorboard
+
+        if self.use_tensorboard:
+            self.build_tensorboard()
 
     def build_model(self):
 
@@ -35,6 +46,16 @@ class Trainer:
 
         self.optimizer = torch.optim.Adam(self.AttnNet.parameters(), self.lr, [0.5, 0.999])
 
+    def build_tensorboard(self):
+        """Build a tensorboard logger."""
+        from logger import Logger
+        self.logger = Logger(self.exp_path)
+
+    def update_lr(self, lr):
+        """Decay learning rates of the generator and discriminator."""
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = lr
+
     def reset_grad(self):
         """Reset the gradient buffers."""
         self.optimizer.zero_grad()
@@ -42,7 +63,9 @@ class Trainer:
     def train(self):
 
         lr = self.lr
-        loss = nn.MSELoss()
+        step = 0
+
+        start_time = time.time()
 
         for epoch in range(self.epoch):
 
@@ -66,3 +89,23 @@ class Trainer:
                 self.reset_grad()
                 loss.backward()
                 self.optimizer.step()
+
+                logs = {
+                    'loss/total': loss.item(),
+                    'loss/acc': s1_loss.item(),
+                    'loss/voc': s2_loss.item()}
+
+                if (step+1) % self.log_step == 0:
+
+                    et = time.time() - start_time
+                    et = str(datetime.timedelta(seconds=et))[:-7]
+                    log = "Elapsed [{}], Iteration [{}/{}]".format(et, step + 1, self.num_iters)
+                    for tag, value in logs.items():
+                        log += ", {}: {:.4f}".format(tag, value)
+                    print(log)
+
+                    if self.use_tensorboard:
+                        for tag, value in logs.items():
+                            self.logger.scalar_summary(tag, value, step+1)
+
+                step += 1

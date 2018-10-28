@@ -12,16 +12,16 @@ def train(config):
 
     exp_name = config.model_name + config.exp_number
     exp_path = os.path.join(config.log_path, exp_name)
+    config.exp_path = exp_path
 
     if os.path.exists(exp_path):
         print('exp already exists! use other name')
         # return
     else:
-        config.exp_path = exp_path
         os.makedirs(exp_path)
 
     train_loader, valid_loader = get_loader(config.data_path, config.input_length,
-                                              config.batch_size)
+                                            config.batch_size)
 
     trainer = Trainer(train_loader, config)
     trainer.train()
@@ -46,16 +46,20 @@ if __name__ == '__main__':
     parser.add_argument('--num_sources', type=int, default=2)
     parser.add_argument('--input_length', type=int, default=16384)
 
-
     parser.add_argument('--num_layers', type=int, default=8)
     parser.add_argument('--num_filters', type=int, default=24)
     parser.add_argument('--enc_filter_size', type=int, default=15)
     parser.add_argument('--dec_filter_size', type=int, default=5)
 
     parser.add_argument('--epoch', type=int, default=1000)
-    parser.add_argument('--batch_size', type=int, default=3)
+    parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--use_tensorboard', type=bool, default=True)
 
+    parser.add_argument('--log_step', type=int, default=1)
+    parser.add_argument('--model_save_step', type=int, default=2000)
+    parser.add_argument('--lr_update_step', type=int, default=1000)
+    parser.add_argument('--num_iters', type=int, default=100000)
 
     config = parser.parse_args()
 
