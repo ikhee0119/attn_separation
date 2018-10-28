@@ -124,3 +124,7 @@ class Trainer:
                     print('Decayed learning rates, lr: {}.'.format(lr))
 
                 step += 1
+
+
+    def test(self):
+        pass

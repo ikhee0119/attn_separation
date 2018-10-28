@@ -26,8 +26,15 @@ def train(config):
     trainer = Trainer(train_loader, config)
     trainer.train()
 
+
 def test(config):
-    pass
+
+    exp_name = config.model_name + config.exp_number
+    exp_path = os.path.join(config.log_path, exp_name)
+    config.exp_path = exp_path
+
+    trainer = Trainer(None, config)
+    trainer.test()
 
 if __name__ == '__main__':
 
