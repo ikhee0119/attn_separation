@@ -3,6 +3,7 @@ import torch
 import numpy as np
 import time
 import datetime
+import os
 
 
 class Trainer:
@@ -25,6 +26,8 @@ class Trainer:
         self.lr = config.lr
 
         self.num_iters = config.num_iters
+        self.num_iters_decay = config.num_iters_decay
+
         self.log_step = config.log_step
         self.model_save_step = config.model_save_step
         self.lr_update_step = config.lr_update_step
@@ -107,5 +110,17 @@ class Trainer:
                     if self.use_tensorboard:
                         for tag, value in logs.items():
                             self.logger.scalar_summary(tag, value, step+1)
+
+                # Save model checkpoints.
+                if (step + 1) % self.model_save_step == 0:
+                    save_path = os.path.join(self.exp_path, '{}-AttnNet.ckpt'.format(step + 1))
+                    torch.save(self.AttnNet.state_dict(), save_path)
+                    print('Saved model checkpoints into {}...'.format(save_path))
+
+                # Decay learning rates.
+                if (step + 1) % self.lr_update_step == 0 and (step + 1) > (self.num_iters - self.num_iters_decay):
+                    lr -= (self.lr / float(self.num_iters_decay))
+                    self.update_lr(lr)
+                    print('Decayed learning rates, lr: {}.'.format(lr))
 
                 step += 1

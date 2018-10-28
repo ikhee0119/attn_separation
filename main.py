@@ -51,7 +51,7 @@ if __name__ == '__main__':
     parser.add_argument('--enc_filter_size', type=int, default=15)
     parser.add_argument('--dec_filter_size', type=int, default=5)
 
-    parser.add_argument('--epoch', type=int, default=1000)
+    parser.add_argument('--epoch', type=int, default=100000)
     parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--use_tensorboard', type=bool, default=True)
@@ -59,7 +59,9 @@ if __name__ == '__main__':
     parser.add_argument('--log_step', type=int, default=1)
     parser.add_argument('--model_save_step', type=int, default=2000)
     parser.add_argument('--lr_update_step', type=int, default=1000)
-    parser.add_argument('--num_iters', type=int, default=100000)
+    parser.add_argument('--num_iters', type=int, default=200000)
+
+    parser.add_argument('--num_iters_decay', type=int, default=100000)
 
     config = parser.parse_args()
 
