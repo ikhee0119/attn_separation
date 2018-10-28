@@ -57,8 +57,15 @@ class Dataset(data.Dataset):
 
 def get_loader(dataset_path, input_length, batch_size, num_workers=2):
 
-    # to fix valid set and training result
+    # to fix valid set
     np.random.seed(1337)
+
+    def worker_init_fn(worker_id):
+        """
+        https://github.com/pytorch/pytorch/issues/5059
+        to make np.random.randint in __getitem__ operated randomly, we need below function.
+        """
+        np.random.seed(np.random.get_state()[1][0] + worker_id)
 
     mus = musdb.DB(root_dir=dataset_path)
     tracks = mus.load_mus_tracks(subsets=['train'])
@@ -73,27 +80,35 @@ def get_loader(dataset_path, input_length, batch_size, num_workers=2):
     valid_dataset = Dataset(dataset_path, valid_tracks, input_length)
 
     train_loader = data.DataLoader(dataset=train_dataset,
-                                  batch_size=batch_size,
-                                  num_workers=num_workers)
+                                   batch_size=batch_size,
+                                   num_workers=num_workers,
+                                   shuffle=False,
+                                   worker_init_fn=worker_init_fn)
 
     valid_loader = data.DataLoader(dataset=valid_dataset,
-                                  batch_size=batch_size,
-                                  num_workers=num_workers)
+                                   batch_size=batch_size,
+                                   num_workers=num_workers,
+                                   shuffle=False,
+                                   worker_init_fn=worker_init_fn)
 
     return train_loader, valid_loader
 
 
 if __name__ == '__main__':
-    # test
+    """
+    https://github.com/pytorch/pytorch/issues/5059
+    
+    Make sure that random in __getitem__ works
+    
+    """
     train_loader, _ = get_loader(
         dataset_path='../dataset/musdb18',
         input_length=16384,
-        batch_size=16
+        batch_size=2
     )
 
-    data_iter = iter(train_loader)
-
-    mix, accompanies, vocals = next(data_iter)
-
-    print(mix.shape, accompanies.shape, vocals.shape)
-    print(vocals[0])
+    for epoch in range(3):
+        np.random.seed()
+        print('epoch : {}'.format(epoch))
+        for (mix, accompany, vocal) in train_loader:
+            print(mix)

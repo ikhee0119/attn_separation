@@ -45,13 +45,15 @@ if __name__ == '__main__':
 
     parser.add_argument('--num_sources', type=int, default=2)
     parser.add_argument('--input_length', type=int, default=16384)
-    parser.add_argument('--batch_size', type=int, default=16)
+
 
     parser.add_argument('--num_layers', type=int, default=8)
     parser.add_argument('--num_filters', type=int, default=24)
     parser.add_argument('--enc_filter_size', type=int, default=15)
     parser.add_argument('--dec_filter_size', type=int, default=5)
 
+    parser.add_argument('--epoch', type=int, default=1000)
+    parser.add_argument('--batch_size', type=int, default=3)
     parser.add_argument('--lr', type=float, default=1e-4)
 
 
