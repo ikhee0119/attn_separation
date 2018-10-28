@@ -85,11 +85,13 @@ class Trainer:
                 vocal = vocal.float().to(self.device)
 
                 estimated_accompany, estimated_vocal = self.AttnNet(mix)
+                reconstructed_mix = self.AttnNet(mix, is_sep=False)
 
                 s1_loss = 0.5 * torch.mean((estimated_accompany-accompany)**2)
                 s2_loss = 0.5 * torch.mean((estimated_vocal-vocal)**2)
+                mix_recon_loss = 0.5 * torch.mean((reconstructed_mix-mix)**2)
 
-                loss = s1_loss + s2_loss
+                loss = s1_loss + s2_loss + mix_recon_loss
 
                 self.reset_grad()
                 loss.backward()
@@ -98,7 +100,8 @@ class Trainer:
                 logs = {
                     'loss/total': loss.item(),
                     'loss/acc': s1_loss.item(),
-                    'loss/voc': s2_loss.item()}
+                    'loss/voc': s2_loss.item(),
+                    'loss/mix_rec': mix_recon_loss.item()}
 
                 if (step+1) % self.log_step == 0:
 

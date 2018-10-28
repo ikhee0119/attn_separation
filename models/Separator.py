@@ -17,22 +17,31 @@ class AttnNet(nn.Module):
 
         self.conv2 = conv(dec_filter_size, num_filters, 1)
 
-    def forward(self, x):
+    def forward(self, x, is_sep=True):
 
-        x, skip_layers = self.F(x)
+        if is_sep:
+            x, skip_layers = self.F(x)
 
-        x = self.conv1(x)
-        s1_emb, beta = self.attention(x)
-        s2_emb = x-s1_emb
+            x = self.conv1(x)
+            s1_emb, beta = self.attention(x)
+            s2_emb = x-s1_emb
 
-        s1 = self.G(s1_emb, skip_layers)
-        s1 = self.conv2(s1)
+            s1 = self.G(s1_emb, skip_layers)
+            s1 = self.conv2(s1)
 
-        s2 = self.G(s2_emb, skip_layers)
-        s2 = self.conv2(s2)
+            s2 = self.G(s2_emb, skip_layers)
+            s2 = self.conv2(s2)
 
-        return s1, s2
+            return s1, s2
 
+        else:
+            x, skip_layers = self.F(x)
+
+            x = self.conv1(x)
+
+            recon = self.G(x, skip_layers)
+            recon = self.conv2(recon)
+            return recon
 
 class F(nn.Module):
     def __init__(self, enc_filter_size, num_filters):
@@ -86,6 +95,7 @@ class G(nn.Module):
         o = self.up8(o, skip_layers[-8])
 
         return o
+
 
 class CrossAttention(nn.Module):
     def __init__(self, in_ch, out_ch):
