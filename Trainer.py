@@ -1,6 +1,8 @@
 from models.Separator import AttnNet
 import torch
+import torch.nn as nn
 import numpy as np
+
 
 class Trainer:
     def __init__(self, train_loader, config):
@@ -21,6 +23,8 @@ class Trainer:
         self.epoch = config.epoch
         self.lr = config.lr
 
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
         self.build_model()
 
     def build_model(self):
@@ -31,10 +35,34 @@ class Trainer:
 
         self.optimizer = torch.optim.Adam(self.AttnNet.parameters(), self.lr, [0.5, 0.999])
 
+    def reset_grad(self):
+        """Reset the gradient buffers."""
+        self.optimizer.zero_grad()
+
     def train(self):
 
+        lr = self.lr
+        loss = nn.MSELoss()
+
         for epoch in range(self.epoch):
+
             # https://github.com/pytorch/pytorch/issues/5059
+            # to make __getitem__ in data_loader random.
             np.random.seed()
+
             for (mix, accompany, vocal) in self.train_loader:
-                print(mix[0])
+
+                mix = mix.float().to(self.device)
+                accompany = accompany.float().to(self.device)
+                vocal = vocal.float().to(self.device)
+
+                estimated_accompany, estimated_vocal = self.AttnNet(mix)
+
+                s1_loss = 0.5 * torch.mean((estimated_accompany-accompany)**2)
+                s2_loss = 0.5 * torch.mean((estimated_vocal-vocal)**2)
+
+                loss = s1_loss + s2_loss
+
+                self.reset_grad()
+                loss.backward()
+                self.optimizer.step()

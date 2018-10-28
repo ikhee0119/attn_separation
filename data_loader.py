@@ -30,16 +30,18 @@ class Dataset(data.Dataset):
     def __getitem__(self, track):
         """
         :param track: track number
+
+        accompany, vocal : (c=1, t)
         :return:
         """
         accompany, vocal = self.sequences[track]
-        length = accompany.shape[0]
+        length = accompany.shape[1]
 
         start_idx = np.squeeze(np.random.randint(0, length - self.input_length +1, 1))
         end_idx = start_idx + self.input_length
 
-        accompany = accompany[start_idx:end_idx]
-        vocal = vocal[start_idx:end_idx]
+        accompany = accompany[:, start_idx:end_idx]
+        vocal = vocal[:, start_idx:end_idx]
 
         if self.is_augment:
             accompany *= np.random.uniform(0.7, 1.0)
