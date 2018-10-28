@@ -49,6 +49,8 @@ class Trainer:
 
         self.optimizer = torch.optim.Adam(self.AttnNet.parameters(), self.lr, [0.5, 0.999])
 
+        self.AttnNet.to(self.device)
+
     def build_tensorboard(self):
         """Build a tensorboard logger."""
         from logger import Logger

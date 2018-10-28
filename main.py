@@ -4,6 +4,8 @@ import os
 from data_loader import get_loader
 from Trainer import Trainer
 
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
+
 
 def train(config):
 
