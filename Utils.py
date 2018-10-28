@@ -20,7 +20,7 @@ def load_wav(wav_path, desired_sample_rate=22050):
 
     sequence, sample_rate = read_wav(wav_path)
     sequence = ensure_sample_rate(sequence, desired_sample_rate, sample_rate)
-    return sequence
+    return np.expand_dims(sequence, 0)
 
 def ensure_sample_rate(x, desired_sample_rate, file_sample_rate):
 
