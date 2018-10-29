@@ -1,4 +1,6 @@
 from models.Separator import AttnNet
+from Tester import estimate_track
+
 import torch
 import numpy as np
 import time
@@ -7,9 +9,10 @@ import os
 
 
 class Trainer:
-    def __init__(self, train_loader, config):
+    def __init__(self, train_loader, valid_loader, config):
 
         self.train_loader = train_loader
+        self.valid_loader = valid_loader
 
         self.attention_fn = config.attention_fn
 
@@ -31,6 +34,7 @@ class Trainer:
         self.log_step = config.log_step
         self.model_save_step = config.model_save_step
         self.lr_update_step = config.lr_update_step
+        self.valid_step = config.valid_step
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.exp_path = config.exp_path
@@ -103,7 +107,7 @@ class Trainer:
                     'loss/voc': s2_loss.item(),
                     'loss/mix_rec': mix_recon_loss.item()}
 
-                if (step+1) % self.log_step == 0:
+                if (step + 1) % self.log_step == 0:
 
                     et = time.time() - start_time
                     et = str(datetime.timedelta(seconds=et))[:-7]
@@ -128,8 +132,41 @@ class Trainer:
                     self.update_lr(lr)
                     print('Decayed learning rates, lr: {}.'.format(lr))
 
+                if (step + 1) % self.valid_step == 0:
+                    self.compute_valid_loss(step)
+
                 step += 1
 
+    def compute_valid_loss(self, step):
+        """
+        self.sequences : list of triples (mix, accompany, vocal), here each component is array [ch=1, t]
 
-    def test(self):
-        pass
+        :return:
+        """
+
+        print('Measuring validation loss..!')
+        tracks = self.valid_loader.dataset.sequences
+
+        loss = 0
+        for components in tracks:
+
+            # components : (mix, acc, voc)
+
+            track = torch.from_numpy(components[0]).unsqueeze(0).float()
+            track = track.to(self.device)
+            source_pred = estimate_track(self.AttnNet, track, self.input_length)
+
+            for i, source in enumerate(source_pred):
+                loss += 0.5 * np.sum((np.squeeze(source) - np.squeeze(components[i+1]))**2)
+
+        logs = {
+            'valid_loss/total': loss.item()
+        }
+
+        log = "Valid loss, Iteration [{}/{}]".format(step + 1, self.num_iters)
+        for tag, value in logs.items():
+            log += ", {}: {:.4f}".format(tag, value)
+
+        if self.use_tensorboard:
+            for tag, value in logs.items():
+                self.logger.scalar_summary(tag, value, step + 1)

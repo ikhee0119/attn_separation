@@ -26,7 +26,7 @@ def train(config):
     train_loader, valid_loader = get_loader(config.data_path, config.input_length,
                                             config.batch_size)
 
-    trainer = Trainer(train_loader, config)
+    trainer = Trainer(train_loader, valid_loader, config)
     trainer.train()
 
 
@@ -50,7 +50,7 @@ if __name__ == '__main__':
     parser.add_argument('--log_path', default='../log/attn_separation')
 
     parser.add_argument('--model_name', choices=['attention'], default='attention')
-    parser.add_argument('--exp_number', default='0')
+    parser.add_argument('--exp_number', default='1')
 
     # architecture parameters
 
@@ -74,13 +74,15 @@ if __name__ == '__main__':
     parser.add_argument('--log_step', type=int, default=1)
     parser.add_argument('--model_save_step', type=int, default=2000)
     parser.add_argument('--lr_update_step', type=int, default=1000)
+    parser.add_argument('--valid_step', type=int, default=10)
+
     parser.add_argument('--num_iters', type=int, default=200000)
 
     parser.add_argument('--num_iters_decay', type=int, default=100000)
 
     # test setting
 
-    parser.add_argument('--saved_model', default='20000-AttnNet.ckpt')
+    parser.add_argument('--saved_model', default='12000-AttnNet.ckpt')
     # parser.add_argument('--target_wav', default="../example/Angels In Amplifiers - I'm Alright.stem_mix.wav")
     parser.add_argument('--target_wav', default="../example/The Mountaineering Club - Mallory.stem_mix.wav")
 
