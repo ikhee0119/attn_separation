@@ -89,13 +89,20 @@ class Trainer:
                 vocal = vocal.float().to(self.device)
 
                 estimated_accompany, estimated_vocal = self.AttnNet(mix)
-                reconstructed_mix = self.AttnNet(mix, is_sep=False)
+
+                # reconstructed_mix = self.AttnNet(mix, is_sep=False)
+                # reconstructed_acc = self.AttnNet(accompany, is_sep=False)
+                # reconstructed_voc = self.AttnNet(vocal, is_sep=False)
 
                 s1_loss = 0.5 * torch.mean((estimated_accompany-accompany)**2)
                 s2_loss = 0.5 * torch.mean((estimated_vocal-vocal)**2)
-                mix_recon_loss = 0.5 * torch.mean((reconstructed_mix-mix)**2)
 
-                loss = s1_loss + s2_loss + mix_recon_loss
+                # mix_recon_loss = 0.5 * torch.mean((reconstructed_mix-mix)**2)
+                # acc_recon_loss = 0.5 * torch.mean((reconstructed_acc-accompany)**2)
+                # voc_recon_loss = 0.5 * torch.mean((reconstructed_voc-vocal)**2)
+
+                # loss = s1_loss + s2_loss + acc_recon_loss + voc_recon_loss
+                loss = s1_loss + s2_loss
 
                 self.reset_grad()
                 loss.backward()
@@ -105,7 +112,10 @@ class Trainer:
                     'loss/total': loss.item(),
                     'loss/acc': s1_loss.item(),
                     'loss/voc': s2_loss.item(),
-                    'loss/mix_rec': mix_recon_loss.item()}
+                    # 'loss/mix_rec': mix_recon_loss.item(),
+                    # 'loss/acc_rec': acc_recon_loss.item(),
+                    # 'loss/voc_rec': voc_recon_loss.item(),
+                }
 
                 if (step + 1) % self.log_step == 0:
 
@@ -113,7 +123,7 @@ class Trainer:
                     et = str(datetime.timedelta(seconds=et))[:-7]
                     log = "Elapsed [{}], Iteration [{}/{}]".format(et, step + 1, self.num_iters)
                     for tag, value in logs.items():
-                        log += ", {}: {:.4f}".format(tag, value)
+                        log += ", {}: {:.6f}".format(tag, value)
                     print(log)
 
                     if self.use_tensorboard:
@@ -157,7 +167,7 @@ class Trainer:
             source_pred = estimate_track(self.AttnNet, track, self.input_length)
 
             for i, source in enumerate(source_pred):
-                loss += 0.5 * np.sum((np.squeeze(source) - np.squeeze(components[i+1]))**2)
+                loss += 0.5 * np.sum((np.squeeze(source)-np.squeeze(components[i+1]))**2)/(source.shape[-1]//self.input_length)
 
         logs = {
             'valid_loss/total': loss.item()
@@ -165,7 +175,8 @@ class Trainer:
 
         log = "Valid loss, Iteration [{}/{}]".format(step + 1, self.num_iters)
         for tag, value in logs.items():
-            log += ", {}: {:.4f}".format(tag, value)
+            log += ", {}: {:.6f}".format(tag, value)
+        print(log)
 
         if self.use_tensorboard:
             for tag, value in logs.items():

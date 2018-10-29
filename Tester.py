@@ -26,7 +26,9 @@ def estimate_track(model, track, input_length):
         mix_segment = track[:, :, start: start+input_length]
 
         estimates = model(mix_segment)
-        estimates = [estimate.detach().numpy() for estimate in estimates]
+
+        # when gpu is on, .cpu() needed
+        estimates = [estimate.detach().cpu().numpy() for estimate in estimates]
 
         for s in range(len(source_preds)):
             source_preds[s][:, :, start: start+input_length] = estimates[s]

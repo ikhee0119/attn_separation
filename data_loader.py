@@ -106,7 +106,7 @@ if __name__ == '__main__':
         batch_size=2
     )
 
-    for epoch in range(3):
+    for epoch in range(8):
         np.random.seed()
         print('epoch : {}'.format(epoch))
         for (mix, accompany, vocal) in train_loader:
