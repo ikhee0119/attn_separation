@@ -1,12 +1,10 @@
 import musdb
-import torch
 from torch.utils import data
-
-import random
 import numpy as np
 import os
 
 import Utils
+
 
 class Dataset(data.Dataset):
 
@@ -25,7 +23,7 @@ class Dataset(data.Dataset):
 
         :return:
         """
-        self.sequences = Utils.load_tracks(self.dataset_path, self.tracks)
+        self.sequences = Utils.load_tracks(self.dataset_path, self.tracks, include_mix=True)
 
     def __getitem__(self, track):
         """
@@ -34,28 +32,27 @@ class Dataset(data.Dataset):
         accompany, vocal : (c=1, t)
         :return:
         """
-        accompany, vocal = self.sequences[track]
+        mix, accompany, vocal = self.sequences[track]
         length = accompany.shape[1]
 
         start_idx = np.squeeze(np.random.randint(0, length - self.input_length +1, 1))
         end_idx = start_idx + self.input_length
 
+        mix = mix[:, start_idx:end_idx]
         accompany = accompany[:, start_idx:end_idx]
         vocal = vocal[:, start_idx:end_idx]
 
         if self.is_augment:
             accompany *= np.random.uniform(0.7, 1.0)
             vocal *= np.random.uniform(0.7, 1.0)
-
-        mix = accompany + vocal
+            mix = accompany + vocal
 
         return mix, accompany, vocal
-        # return accompany[start_idx:end_idx], vocal[start_idx:end_idx]
-
 
     def __len__(self):
         """Return the number of tracks."""
         return len(self.sequences)
+
 
 def get_loader(dataset_path, input_length, batch_size, num_workers=2):
 
