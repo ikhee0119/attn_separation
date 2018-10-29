@@ -12,7 +12,7 @@ def estimate_track(model, track, input_length):
     separate one full track
 
     :param model:
-    :param track: desired track to separate (numpy) : (bs=1, ch=1, t)
+    :param track: desired track to separate (tensor) : (bs=1, ch=1, t)
     :return: list of estimated sources : [ (1, 1, t), (1, 1, t) .. ]
 
     """
@@ -72,7 +72,6 @@ class Tester:
         # list of (mix, accompany, vocal)
         self.sequences = Utils.load_tracks(os.path.join(self.data_path, 'test'), tracks, include_mix=True)
         self.sequences = {track: self.sequences[track] for track in tracks}
-        a=1
 
     def load_model(self):
         print('Loading the trained models from {}...'.format(self.saved_model))
