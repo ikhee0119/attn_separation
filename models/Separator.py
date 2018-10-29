@@ -12,8 +12,8 @@ class AttnNet(nn.Module):
 
         self.conv1 = conv(enc_filter_size, num_filters*8, num_filters*9)
 
-        # self.attention_block = AttentionBlock(num_filters*9, num_filters*9)
-        self.attention_block = AttentionBlockSparse(num_filters*9, num_filters*9)
+        self.attention_block = AttentionBlock(num_filters*9, num_filters*9)
+        # self.attention_block = AttentionBlockSparse(num_filters*9, num_filters*9)
 
         self.G = G(attention_fn, dec_filter_size, num_filters)
 
@@ -34,10 +34,10 @@ class AttnNet(nn.Module):
 
             # decoder
 
-            s1 = self.G(s1_emb, skip_layers)
+            s1 = self.G(s1_emb, skip_layers, is_sep)
             s1 = self.conv2(s1)
 
-            s2 = self.G(s2_emb, skip_layers)
+            s2 = self.G(s2_emb, skip_layers, is_sep)
             s2 = self.conv2(s2)
 
             return s1, s2
@@ -47,7 +47,7 @@ class AttnNet(nn.Module):
 
             x = self.conv1(x)
 
-            recon = self.G(x, skip_layers)
+            recon = self.G(x, skip_layers, is_sep)
             recon = self.conv2(recon)
             return recon
 
@@ -92,16 +92,16 @@ class G(nn.Module):
         self.up7 = UpSkip(attention_fn, dec_filter_size, num_filters*3, num_filters*2)
         self.up8 = UpSkip(attention_fn, dec_filter_size, num_filters*2, num_filters)
 
-    def forward(self, x, skip_layers):
+    def forward(self, x, skip_layers, is_sep=True):
 
-        o = self.up1(x, skip_layers[-1])
-        o = self.up2(o, skip_layers[-2])
-        o = self.up3(o, skip_layers[-3])
-        o = self.up4(o, skip_layers[-4])
-        o = self.up5(o, skip_layers[-5])
-        o = self.up6(o, skip_layers[-6])
-        o = self.up7(o, skip_layers[-7])
-        o = self.up8(o, skip_layers[-8])
+        o = self.up1(x, skip_layers[-1], is_sep)
+        o = self.up2(o, skip_layers[-2], is_sep)
+        o = self.up3(o, skip_layers[-3], is_sep)
+        o = self.up4(o, skip_layers[-4], is_sep)
+        o = self.up5(o, skip_layers[-5], is_sep)
+        o = self.up6(o, skip_layers[-6], is_sep)
+        o = self.up7(o, skip_layers[-7], is_sep)
+        o = self.up8(o, skip_layers[-8], is_sep)
 
         return o
 
@@ -198,10 +198,12 @@ class UpSkip(nn.Module):
         self.conv = nn.Conv1d(emb_ch+skip_ch, skip_ch, dec_filter_size, padding=dec_filter_size//2)
         self.activation = nn.LeakyReLU(negative_slope=0.2)
 
-    def forward(self, x, skip):
+    def forward(self, x, skip, is_sep=True):
 
         x = self.upsample(x)
-        skip, beta = self.attention_fn(x, skip)
+
+        if is_sep:
+            skip, beta = self.attention_fn(x, skip)
 
         x = torch.cat((skip, x), 1) # channel-wise
 
