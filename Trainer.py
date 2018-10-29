@@ -88,7 +88,7 @@ class Trainer:
                 accompany = accompany.float().to(self.device)
                 vocal = vocal.float().to(self.device)
 
-                estimated_accompany, estimated_vocal = self.AttnNet(mix)
+                estimated_accompany, estimated_vocal, _, _ = self.AttnNet(mix)
 
                 # reconstructed_mix = self.AttnNet(mix, is_sep=False)
                 # reconstructed_acc = self.AttnNet(accompany, is_sep=False)

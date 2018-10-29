@@ -30,24 +30,24 @@ class AttnNet(nn.Module):
 
             # attention_module
 
-            s1_emb, s2_emb, beta = self.attention_block(x)
+            s1_emb, s2_emb, beta1, beta2 = self.attention_block(x)
 
             # decoder
 
-            s1 = self.G(s1_emb, skip_layers, is_sep)
+            s1, betas1 = self.G(s1_emb, skip_layers, is_sep)
             s1 = self.conv2(s1)
 
-            s2 = self.G(s2_emb, skip_layers, is_sep)
+            s2, betas2 = self.G(s2_emb, skip_layers, is_sep)
             s2 = self.conv2(s2)
 
-            return s1, s2
+            return s1, s2, [beta1] + betas1, [beta2] + betas2
 
         else:
             x, skip_layers = self.F(x)
 
             x = self.conv1(x)
 
-            recon = self.G(x, skip_layers, is_sep)
+            recon, _ = self.G(x, skip_layers, is_sep)
             recon = self.conv2(recon)
             return recon
 
@@ -94,16 +94,16 @@ class G(nn.Module):
 
     def forward(self, x, skip_layers, is_sep=True):
 
-        o = self.up1(x, skip_layers[-1], is_sep)
-        o = self.up2(o, skip_layers[-2], is_sep)
-        o = self.up3(o, skip_layers[-3], is_sep)
-        o = self.up4(o, skip_layers[-4], is_sep)
-        o = self.up5(o, skip_layers[-5], is_sep)
-        o = self.up6(o, skip_layers[-6], is_sep)
-        o = self.up7(o, skip_layers[-7], is_sep)
-        o = self.up8(o, skip_layers[-8], is_sep)
+        o, beta1 = self.up1(x, skip_layers[-1], is_sep)
+        o, beta2 = self.up2(o, skip_layers[-2], is_sep)
+        o, beta3 = self.up3(o, skip_layers[-3], is_sep)
+        o, beta4 = self.up4(o, skip_layers[-4], is_sep)
+        o, beta5 = self.up5(o, skip_layers[-5], is_sep)
+        o, beta6 = self.up6(o, skip_layers[-6], is_sep)
+        o, beta7 = self.up7(o, skip_layers[-7], is_sep)
+        o, beta8 = self.up8(o, skip_layers[-8], is_sep)
 
-        return o
+        return o, [beta1, beta2, beta3, beta4, beta5, beta6, beta7, beta8]
 
 
 class CrossAttention(nn.Module):
@@ -136,7 +136,7 @@ class AttentionBlock(nn.Module):
         emb1, beta = self.attention_fn(x)
         emb2 = x-emb1
 
-        return emb1, emb2, beta
+        return emb1, emb2, beta, 1-beta
 
 
 class AttentionBlockSparse(nn.Module):
@@ -202,6 +202,7 @@ class UpSkip(nn.Module):
 
         x = self.upsample(x)
 
+        beta = None
         if is_sep:
             skip, beta = self.attention_fn(x, skip)
 
@@ -210,7 +211,7 @@ class UpSkip(nn.Module):
         x = self.conv(x)
         x = self.activation(x)
 
-        return x
+        return x, beta
 
 
 class up(nn.Module):
@@ -271,5 +272,5 @@ if __name__ == '__main__':
                       dec_filter_size=5)
 
     x = torch.ones((1, 1, 16384))
-    s1, s2 = attnnet(x)
+    s1, s2, betas1, betas2 = attnnet(x)
     print(s1.size(), s2.size())
