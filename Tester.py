@@ -94,7 +94,9 @@ class Tester:
             for i, source in enumerate(source_pred):
                 source = np.squeeze(source)
                 # Utils.write_wav(source, '../example/example{}.wav'.format(i), 22050)
-                Utils.write_wav(source, os.path.join(self.exp_path, track_name, 'source{}.wav'.format(i)), 22050)
+
+                save_path = os.path.join(self.exp_path, track_name + '_spurce{}.wav'.format(i))
+                Utils.write_wav(source, save_path, 22050)
 
 if __name__ == '__main__':
     pass
