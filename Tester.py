@@ -56,7 +56,7 @@ class Tester:
             self.data_path = config.data_path
             self.load_files()
         else:
-            self.sequences = [Utils.load_wav(target_wav)]
+            self.sequences = {os.path.basename(target_wav)[:-4]: Utils.load_wav(target_wav)}
 
         # load model
         self.exp_path = config.exp_path
@@ -71,6 +71,8 @@ class Tester:
 
         # list of (mix, accompany, vocal)
         self.sequences = Utils.load_tracks(os.path.join(self.data_path, 'test'), tracks, include_mix=True)
+        self.sequences = {track: self.sequences[track] for track in tracks}
+        a=1
 
     def load_model(self):
         print('Loading the trained models from {}...'.format(self.saved_model))
@@ -84,14 +86,15 @@ class Tester:
         :return:
         """
 
-        for track in self.sequences:
+        for track_name, track in self.sequences.items():
 
             track = torch.from_numpy(track).unsqueeze(0).float()
             source_pred = estimate_track(self.AttnNet, track, self.input_length)
 
             for i, source in enumerate(source_pred):
                 source = np.squeeze(source)
-                Utils.write_wav(source, '../example/example{}.wav'.format(i), 22050)
+                # Utils.write_wav(source, '../example/example{}.wav'.format(i), 22050)
+                Utils.write_wav(source, os.path.join(self.exp_path, track_name, 'source{}.wav'.format(i)), 22050)
 
 if __name__ == '__main__':
     pass

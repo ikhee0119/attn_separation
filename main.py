@@ -81,7 +81,8 @@ if __name__ == '__main__':
     # test setting
 
     parser.add_argument('--saved_model', default='20000-AttnNet.ckpt')
-    parser.add_argument('--target_wav', default="../example/Angels In Amplifiers - I'm Alright.stem_mix.wav")
+    # parser.add_argument('--target_wav', default="../example/Angels In Amplifiers - I'm Alright.stem_mix.wav")
+    parser.add_argument('--target_wav', default="../example/The Mountaineering Club - Mallory.stem_mix.wav")
 
     config = parser.parse_args()
 
