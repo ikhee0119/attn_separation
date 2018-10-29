@@ -3,6 +3,8 @@ import soundfile as sf
 import numpy as np
 import os
 
+import warnings
+
 
 def read_wav(filename):
     # Reads in a wav audio file, averages both if stereo, converts the signal to float64 representation
@@ -72,3 +74,13 @@ def load_tracks(dataset_path, tracks, include_mix=False):
             sequences.append((accompany, vocal))
 
     return sequences
+
+
+def write_wav(x, filename, sample_rate):
+
+    if type(x) != np.ndarray:
+        x = np.array(x)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        sf.write(filename, x, sample_rate)

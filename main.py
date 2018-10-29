@@ -3,6 +3,7 @@ import os
 
 from data_loader import get_loader
 from Trainer import Trainer
+from Tester import Tester
 
 os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
@@ -35,22 +36,25 @@ def test(config):
     exp_path = os.path.join(config.log_path, exp_name)
     config.exp_path = exp_path
 
-    trainer = Trainer(None, config)
-    trainer.test()
+    tester = Tester(config.target_wav, config)
+    tester.predict()
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', choices=['train', 'test'], default='train')
+
+    # model name
+
+    parser.add_argument('--mode', choices=['train', 'test'], default='test')
     parser.add_argument('--data_path', default='../dataset/musdb18')
     parser.add_argument('--log_path', default='../log/attn_separation')
 
     parser.add_argument('--model_name', choices=['attention'], default='attention')
     parser.add_argument('--exp_number', default='0')
 
-    parser.add_argument('--attention_fn', choices=['self_attention, cross_attention'], default='cross_attention')
+    # architecture parameters
 
-    parser.add_argument('--checkpoint_path', default='../checkpoint')
+    parser.add_argument('--attention_fn', choices=['self_attention, cross_attention'], default='cross_attention')
 
     parser.add_argument('--num_sources', type=int, default=2)
     parser.add_argument('--input_length', type=int, default=16384)
@@ -59,6 +63,8 @@ if __name__ == '__main__':
     parser.add_argument('--num_filters', type=int, default=24)
     parser.add_argument('--enc_filter_size', type=int, default=15)
     parser.add_argument('--dec_filter_size', type=int, default=5)
+
+    # training setting
 
     parser.add_argument('--epoch', type=int, default=100000)
     parser.add_argument('--batch_size', type=int, default=1)
@@ -71,6 +77,11 @@ if __name__ == '__main__':
     parser.add_argument('--num_iters', type=int, default=200000)
 
     parser.add_argument('--num_iters_decay', type=int, default=100000)
+
+    # test setting
+
+    parser.add_argument('--saved_model', default='20000-AttnNet.ckpt')
+    parser.add_argument('--target_wav', default="../example/Angels In Amplifiers - I'm Alright.stem_mix.wav")
 
     config = parser.parse_args()
 
