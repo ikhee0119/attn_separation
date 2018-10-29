@@ -12,7 +12,8 @@ class AttnNet(nn.Module):
 
         self.conv1 = conv(enc_filter_size, num_filters*8, num_filters*9)
 
-        self.attention_block = AttentionBlock(num_filters*9, num_filters*9)
+        # self.attention_block = AttentionBlock(num_filters*9, num_filters*9)
+        self.attention_block = AttentionBlockSparse(num_filters*9, num_filters*9)
 
         self.G = G(attention_fn, dec_filter_size, num_filters)
 
@@ -21,12 +22,17 @@ class AttnNet(nn.Module):
     def forward(self, x, is_sep=True):
 
         if is_sep:
-            x, skip_layers = self.F(x)
 
+            # encoder
+
+            x, skip_layers = self.F(x)
             x = self.conv1(x)
 
             # attention_module
+
             s1_emb, s2_emb, beta = self.attention_block(x)
+
+            # decoder
 
             s1 = self.G(s1_emb, skip_layers)
             s1 = self.conv2(s1)
@@ -44,6 +50,7 @@ class AttnNet(nn.Module):
             recon = self.G(x, skip_layers)
             recon = self.conv2(recon)
             return recon
+
 
 class F(nn.Module):
     def __init__(self, enc_filter_size, num_filters):
@@ -132,6 +139,31 @@ class AttentionBlock(nn.Module):
         return emb1, emb2, beta
 
 
+class AttentionBlockSparse(nn.Module):
+    def __init__(self, in_ch, out_ch):
+        super(AttentionBlockSparse, self).__init__()
+
+        self.attention_fn1 = SelfAttention(in_ch, out_ch)
+        self.attention_fn2 = SelfAttention(in_ch, out_ch)
+
+        # Todo : check
+        self.softmax = nn.Softmax(dim=3)
+
+    def forward(self, x, skip=None):
+
+        f1 = self.attention_fn1(x, before_act=True)
+        f2 = self.attention_fn2(x, before_act=True)
+
+        # f1, f2 : (bs, c, t) => (bs, c, t, 1) for softmax
+        beta = torch.cat((f1.unsqueeze(-1), f2.unsqueeze(-1)), -1)
+        beta = self.softmax(beta)
+
+        emb1 = torch.mul(x, beta[:,:,:,0])
+        emb2 = torch.mul(x, beta[:,:,:,1])
+
+        return emb1, emb2, beta
+
+
 class SelfAttention(nn.Module):
     def __init__(self, in_ch, out_ch):
         super(SelfAttention, self).__init__()
@@ -139,11 +171,17 @@ class SelfAttention(nn.Module):
         self.conv = nn.Conv1d(out_ch, out_ch, 1)
         self.activation = nn.Sigmoid()
 
-    def forward(self, x, skip=None):
+    def forward(self, x, skip=None, before_act=False):
 
         if skip is not None:
             x = skip
-        beta = self.activation(self.conv(x))
+
+        feature = self.conv(x)
+
+        if before_act:
+            return feature
+
+        beta = self.activation(feature)
         x = torch.mul(beta, x)
 
         return x, beta
