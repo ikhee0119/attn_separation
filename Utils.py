@@ -3,6 +3,7 @@ import soundfile as sf
 import numpy as np
 import os
 
+
 def read_wav(filename):
     # Reads in a wav audio file, averages both if stereo, converts the signal to float64 representation
 
@@ -16,17 +17,20 @@ def read_wav(filename):
 
     return audio_signal, sample_rate
 
+
 def load_wav(wav_path, desired_sample_rate=22050):
 
     sequence, sample_rate = read_wav(wav_path)
     sequence = ensure_sample_rate(sequence, desired_sample_rate, sample_rate)
     return np.expand_dims(sequence, 0)
 
+
 def ensure_sample_rate(x, desired_sample_rate, file_sample_rate):
 
     if file_sample_rate != desired_sample_rate:
         return scipy.signal.resample_poly(x, desired_sample_rate, file_sample_rate)
     return x
+
 
 def wav_to_float(x):
 
@@ -42,10 +46,12 @@ def wav_to_float(x):
     x -= 1.
     return x
 
-def load_tracks(dataset_path, tracks):
-    """
-    :param tracks: list of tracks, [music 1, music 2, ... ]
 
+def load_tracks(dataset_path, tracks, include_mix=False):
+    """
+    if include_mix: return list of (mix, accomapny, voice). else, return list of (accomapny, voice)
+
+    :param tracks: list of tracks, [music 1, music 2, ... ]
     :return: list of tuples (accompany, voice), [ (accompany, voice), (accompany, voice) ... ]
     """
 
@@ -59,5 +65,10 @@ def load_tracks(dataset_path, tracks):
         accompany = load_wav(accompany_path)
         vocal = load_wav(vocal_path)
 
-        sequences.append((accompany, vocal))
+        if include_mix:
+            mix = accompany + vocal
+            sequences.append((mix, accompany, vocal))
+        else:
+            sequences.append((accompany, vocal))
+
     return sequences
