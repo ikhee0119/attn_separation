@@ -11,7 +11,8 @@ class AttnNet(nn.Module):
         self.F = F(enc_filter_size, num_filters)
 
         self.conv1 = conv(enc_filter_size, num_filters*8, num_filters*9)
-        self.attention = SelfAttention(num_filters*9, num_filters*9)
+
+        self.attention_block = AttentionBlock(num_filters*9, num_filters*9)
 
         self.G = G(attention_fn, dec_filter_size, num_filters)
 
@@ -23,8 +24,9 @@ class AttnNet(nn.Module):
             x, skip_layers = self.F(x)
 
             x = self.conv1(x)
-            s1_emb, beta = self.attention(x)
-            s2_emb = x-s1_emb
+
+            # attention_module
+            s1_emb, s2_emb, beta = self.attention_block(x)
 
             s1 = self.G(s1_emb, skip_layers)
             s1 = self.conv2(s1)
@@ -114,6 +116,20 @@ class CrossAttention(nn.Module):
         o = torch.mul(beta, skip)
 
         return o, beta
+
+
+class AttentionBlock(nn.Module):
+    def __init__(self, in_ch, out_ch):
+        super(AttentionBlock, self).__init__()
+
+        self.attention_fn = SelfAttention(in_ch, out_ch)
+
+    def forward(self, x, skip=None):
+
+        emb1, beta = self.attention_fn(x)
+        emb2 = x-emb1
+
+        return emb1, emb2, beta
 
 
 class SelfAttention(nn.Module):

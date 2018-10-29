@@ -45,7 +45,7 @@ if __name__ == '__main__':
 
     # model name
 
-    parser.add_argument('--mode', choices=['train', 'test'], default='test')
+    parser.add_argument('--mode', choices=['train', 'test'], default='train')
     parser.add_argument('--data_path', default='../dataset/musdb18')
     parser.add_argument('--log_path', default='../log/attn_separation')
 
