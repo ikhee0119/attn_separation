@@ -7,7 +7,7 @@ import numpy as np
 import os
 
 
-def estimate_track(model, track, input_length):
+def estimate_track(model, track, input_length, get_betamap=False):
     """
     separate one full track
 
@@ -19,13 +19,19 @@ def estimate_track(model, track, input_length):
     track_length = track.shape[2]
 
     source_preds = [np.zeros(track.shape, np.float32) for _ in range(2)]
+
+    # save beta map
+    if get_betamap:
+        beta_maps = {s: [[] for _ in range(9)] for s in range(2)}
+
     for start in range(0, track_length, input_length):
         if start + input_length > track_length:
             start = track_length - input_length - 1
 
         mix_segment = track[:, :, start: start+input_length]
 
-        estimates = model(mix_segment)
+        # betas : tuple (beta1, beta2), beta1 : list of beta maps for skip connections, (bs, c, t)
+        estimates, betas = model(mix_segment)
 
         # when gpu is on, .cpu() needed
         estimates = [estimate.detach().cpu().numpy() for estimate in estimates]
@@ -33,7 +39,46 @@ def estimate_track(model, track, input_length):
         for s in range(len(source_preds)):
             source_preds[s][:, :, start: start+input_length] = estimates[s]
 
+            if get_betamap:
+                for i, skip in enumerate(betas[s]):
+                    beta_maps[s][i].append(skip.detach().cpu().numpy().squeeze())
+
+    if get_betamap:
+        return source_preds, beta_maps
+
     return source_preds
+
+
+def save_heatmap(attention_map, path):
+    """
+
+    :param attention_map: array of attention map, (t, attention proportion)
+    :param path: path to save
+    :return:
+    """
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+
+    ax = sns.heatmap(attention_map.transpose())
+    # plt.show()
+    figure = ax.get_figure()
+    figure.savefig(path, dpi=400) # 400
+
+    plt.clf()
+
+
+def save_all_heatmaps(attention_maps, exp_path):
+    """
+
+    :param attention_maps: {0: [skip1, skip2, ...] 1: [skip1, skip2, ...]}, each skip (c, t)
+    :param exp_path: experiment_path
+    :return:
+    """
+    for s in range(len(attention_maps)):
+        for i, skip in enumerate(attention_maps[s]):
+
+            save_path = os.path.join(exp_path, 'source{}_skip{}'.format(s, i))
+            save_heatmap(np.squeeze(np.concatenate(skip, axis=1)), save_path)
 
 
 class Tester:
@@ -90,13 +135,19 @@ class Tester:
         for track_name, track in self.sequences.items():
 
             track = torch.from_numpy(track).unsqueeze(0).float()
-            source_pred = estimate_track(self.AttnNet, track, self.input_length)
+            source_pred, beta_maps = estimate_track(self.AttnNet, track, self.input_length, get_betamap=True)
+
+            # save beta maps
+            save_all_heatmaps(beta_maps, os.path.join(self.exp_path, self.saved_model.split('.')[0]))
 
             for i, source in enumerate(source_pred):
                 source = np.squeeze(source)
-                # Utils.write_wav(source, '../example/example{}.wav'.format(i), 22050)
+                save_folder = os.path.join(self.exp_path, self.saved_model.split('.')[0])
 
-                save_path = os.path.join(self.exp_path, track_name + '_spurce{}.wav'.format(i))
+                if not os.path.exists(save_folder):
+                    os.makedirs(save_folder)
+
+                save_path = os.path.join(save_folder, track_name + 'source{}.wav'.format(i))
                 Utils.write_wav(source, save_path, 22050)
 
 if __name__ == '__main__':
