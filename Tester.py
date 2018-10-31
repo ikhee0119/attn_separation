@@ -52,18 +52,18 @@ def estimate_track(model, track, input_length, get_betamap=False):
 def save_heatmap(attention_map, path):
     """
 
-    :param attention_map: array of attention map, (t, attention proportion)
+    :param attention_map: array of attention map, (attention proportion, t)
     :param path: path to save
     :return:
     """
     import seaborn as sns
     import matplotlib.pyplot as plt
 
-    ax = sns.heatmap(attention_map.transpose())
+    xticklabels = attention_map.shape[1]//5
+    ax = sns.heatmap(attention_map, xticklabels=xticklabels, yticklabels=20)
     # plt.show()
     figure = ax.get_figure()
     figure.savefig(path, dpi=400) # 400
-
     plt.clf()
 
 
