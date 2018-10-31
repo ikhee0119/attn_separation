@@ -84,3 +84,8 @@ def write_wav(x, filename, sample_rate):
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         sf.write(filename, x, sample_rate)
+
+
+def slice_wav(path, save_path, start, end):
+
+    os.system('ffmpeg -ss {} -t {} -i {} {}'.format(start, end, path, save_path))
