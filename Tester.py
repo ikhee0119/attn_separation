@@ -131,24 +131,24 @@ class Tester:
 
         :return:
         """
+        save_folder = os.path.join(self.exp_path, self.saved_model.split('.')[0])
+
+        if not os.path.exists(save_folder):
+            os.makedirs(save_folder)
 
         for track_name, track in self.sequences.items():
 
             track = torch.from_numpy(track).unsqueeze(0).float()
             source_pred, beta_maps = estimate_track(self.AttnNet, track, self.input_length, get_betamap=True)
 
-            # save beta maps
-            save_all_heatmaps(beta_maps, os.path.join(self.exp_path, self.saved_model.split('.')[0]))
-
             for i, source in enumerate(source_pred):
                 source = np.squeeze(source)
-                save_folder = os.path.join(self.exp_path, self.saved_model.split('.')[0])
-
-                if not os.path.exists(save_folder):
-                    os.makedirs(save_folder)
 
                 save_path = os.path.join(save_folder, track_name + 'source{}.wav'.format(i))
                 Utils.write_wav(source, save_path, 22050)
+
+            # save beta maps
+            save_all_heatmaps(beta_maps, save_folder)
 
 if __name__ == '__main__':
     pass
