@@ -7,21 +7,20 @@ import torch.nn.functional as f
 
 class AttnNet(nn.Module):
     def __init__(self, attention_fn, num_layers, num_filters, enc_filter_size, dec_filter_size,
-                 is_skip_attention=True, is_diff=True, context=False):
+                 is_skip_attention=True, is_diff=True, context=False, stereo=True):
         super(AttnNet, self).__init__()
 
         self.is_skip_attention = is_skip_attention
         self.is_diff = is_diff
         self.context = context
 
-        self.F = F(enc_filter_size, num_filters, num_layers, context)
+        self.F = F(enc_filter_size, num_filters, num_layers, context, stereo)
         self.conv1 = conv(enc_filter_size, num_filters*num_layers, num_filters*(num_layers+1), context)
 
         self.attention_block = AttentionBlock(num_filters*(num_layers+1), num_filters*(num_layers+1))
         # self.attention_block = AttentionBlockSparse(num_filters*9, num_filters*9)
 
-        self.G = G(attention_fn, dec_filter_size, num_filters, num_layers, is_skip_attention, context)
-        self.conv2 = conv(dec_filter_size, num_filters, 1, context)
+        self.G = G(attention_fn, dec_filter_size, num_filters, num_layers, is_skip_attention, context, stereo)
 
         self.centercrop = CenterCrop()
 
@@ -41,7 +40,6 @@ class AttnNet(nn.Module):
         # decoder
 
         s1, betas1 = self.G(s1_emb, skip_layers)
-        # s1 = self.conv2(s1)
 
         if self.is_diff:
 
@@ -56,11 +54,13 @@ class AttnNet(nn.Module):
 
 
 class F(nn.Module):
-    def __init__(self, enc_filter_size, num_filters, num_layers, context):
+    def __init__(self, enc_filter_size, num_filters, num_layers, context, stereo):
         super(F, self).__init__()
 
+        input_ch = 2 if stereo else 1
+
         self.downs = nn.ModuleList()
-        self.downs.append(down(enc_filter_size, 1, num_filters, context=context))
+        self.downs.append(down(enc_filter_size, input_ch, num_filters, context=context))
         self.downs.extend([down(enc_filter_size, num_filters*layer, num_filters*(layer+1), context=context)
                            for layer in range(1, num_layers)])
 
@@ -75,7 +75,8 @@ class F(nn.Module):
 
 
 class G(nn.Module):
-    def __init__(self, attention_fn, dec_filter_size, num_filters, num_layers, is_skip_attention=True, context=True):
+    def __init__(self, attention_fn, dec_filter_size, num_filters, num_layers,
+                 is_skip_attention=True, context=True, stereo=True):
         super(G, self).__init__()
 
         self.is_skip_attention = is_skip_attention
@@ -84,7 +85,8 @@ class G(nn.Module):
              for layer in reversed(range(num_layers))]
         )
 
-        self.output = OutputLayer(attention_fn, dec_filter_size, num_filters, 1)
+        out_ch = 2 if stereo else 1
+        self.output = OutputLayer(attention_fn, dec_filter_size, num_filters, out_ch)
 
     def forward(self, x, skip_layers):
 
@@ -344,11 +346,13 @@ class conv(nn.Module):
 if __name__ == '__main__':
     # (bs, c, t)
     attnnet = AttnNet(attention_fn='cross_attention', num_layers=12, num_filters=24, enc_filter_size=15,
-                      dec_filter_size=5, context=True)
+                      dec_filter_size=5, context=True, stereo=True)
 
     # x = torch.ones((1, 1, 16384))
     # x = torch.ones((1, 1, 24563)) # num_layer=8
-    x = torch.ones((1, 1, 147443)) # num_layer=12
+    # x = torch.ones((1, 1, 147443)) # num_layer=12
+    x = torch.ones((1, 2, 147443)) # num_layer=12
+
 
     (s1, s2), (betas1, betas2) = attnnet(x)
     print(s1.size(), s2.size())
