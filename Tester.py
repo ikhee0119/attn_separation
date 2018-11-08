@@ -5,6 +5,7 @@ import musdb
 import museval
 
 import torch
+import torch.nn.functional as f
 import numpy as np
 import os
 
@@ -12,7 +13,7 @@ import glob
 import json
 
 
-def estimate_track(model, track, input_length, get_betamap=False):
+def estimate_track(model, track, input_length, output_length, get_betamap=False, context=True):
     """
     separate one full track
 
@@ -29,8 +30,11 @@ def estimate_track(model, track, input_length, get_betamap=False):
     if get_betamap:
         beta_maps = {s: [[] for _ in range(9)] for s in range(2)}
 
-    for start in range(0, track_length, input_length):
-        if start + input_length > track_length:
+    pad = int((input_length - output_length)/2)
+    track = f.pad(track, (pad,pad), 'constant', 0)
+
+    for start in range(0, track_length, output_length):
+        if start + output_length > track_length:
             start = track_length - input_length - 1
 
         mix_segment = track[:, :, start: start+input_length]
@@ -42,7 +46,7 @@ def estimate_track(model, track, input_length, get_betamap=False):
         estimates = [estimate.detach().cpu().numpy() for estimate in estimates]
 
         for s in range(len(source_preds)):
-            source_preds[s][:, :, start: start+input_length] = estimates[s]
+            source_preds[s][:, :, start: start+output_length] = estimates[s]
 
             if get_betamap:
                 for i, skip in enumerate(betas[s]):
