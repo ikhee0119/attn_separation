@@ -6,13 +6,14 @@ import os
 import warnings
 
 
-def read_wav(filename):
+def read_wav(filename, stereo=True):
     # Reads in a wav audio file, averages both if stereo, converts the signal to float64 representation
 
     audio_signal, sample_rate = sf.read(filename)
 
-    if audio_signal.ndim > 1:
+    if audio_signal.ndim > 1 and not stereo:
         audio_signal = (audio_signal[:, 0] + audio_signal[:, 1])/2.0
+        audio_signal = np.expand_dims(audio_signal, 1)
 
     if audio_signal.dtype != 'float64':
         audio_signal = wav_to_float(audio_signal)
@@ -24,7 +25,7 @@ def load_wav(wav_path, desired_sample_rate=22050):
 
     sequence, sample_rate = read_wav(wav_path)
     sequence = ensure_sample_rate(sequence, desired_sample_rate, sample_rate)
-    return np.expand_dims(sequence, 0)
+    return np.transpose(sequence)
 
 
 def ensure_sample_rate(x, desired_sample_rate, file_sample_rate):
@@ -89,3 +90,30 @@ def write_wav(x, filename, sample_rate):
 def slice_wav(path, save_path, start, end):
 
     os.system('ffmpeg -ss {} -t {} -i {} {}'.format(start, end, path, save_path))
+
+
+def compute_input_length(input_shape, num_layers, enc_filter_size, dec_filter_size):
+
+    x = input_shape
+    for _ in range(num_layers):
+        x = x + dec_filter_size - 1
+        x = (x+1)/ 2
+
+    x = np.asarray(np.ceil(x), dtype=np.int64)
+
+    context_input_length = x
+    context_output_length = x
+
+    context_input_length = context_input_length + enc_filter_size - 1
+
+    # Go from centre feature map through up- and downsampling blocks
+    for i in range(num_layers):
+        context_output_length = 2 * context_output_length - 1  # Upsampling
+        context_output_length = context_output_length - dec_filter_size + 1  # Conv
+
+        context_input_length = 2 * context_input_length - 1  # Decimation
+        context_input_length = context_input_length + enc_filter_size - 1  # Conv
+
+    print('context input, output lengths : {}, {}'.format(context_input_length, context_output_length))
+
+    return context_input_length, context_output_length
