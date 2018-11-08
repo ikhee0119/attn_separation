@@ -15,12 +15,18 @@ class Trainer:
         self.valid_loader = valid_loader
 
         self.attention_fn = config.attention_fn
+        self.is_skip_attention = config.is_skip_attention
+        self.is_diff = config.is_diff
 
+        self.stereo = config.stereo
         self.num_sources = config.num_sources
 
         self.num_layers = config.num_layers
         self.num_filters = config.num_filters
+
+        self.context = config.context
         self.input_length = config.input_length
+        self.output_length = config.output_length
 
         self.enc_filter_size = config.enc_filter_size
         self.dec_filter_size = config.dec_filter_size
@@ -49,7 +55,8 @@ class Trainer:
 
         self.AttnNet = AttnNet(attention_fn=self.attention_fn, num_layers=self.num_layers,
                                num_filters=self.num_filters, enc_filter_size=self.enc_filter_size,
-                               dec_filter_size=self.dec_filter_size)
+                               dec_filter_size=self.dec_filter_size, context=self.context,
+                               is_skip_attention=self.is_skip_attention, is_diff=self.is_diff, stereo=self.stereo)
 
         self.optimizer = torch.optim.Adam(self.AttnNet.parameters(), self.lr, [0.5, 0.999])
 
@@ -88,20 +95,10 @@ class Trainer:
                 accompany = accompany.float().to(self.device)
                 vocal = vocal.float().to(self.device)
 
-                estimated_accompany, estimated_vocal, _, _ = self.AttnNet(mix)
-
-                # reconstructed_mix = self.AttnNet(mix, is_sep=False)
-                # reconstructed_acc = self.AttnNet(accompany, is_sep=False)
-                # reconstructed_voc = self.AttnNet(vocal, is_sep=False)
+                (estimated_accompany, estimated_vocal), (_, _) = self.AttnNet(mix)
 
                 s1_loss = 0.5 * torch.mean((estimated_accompany-accompany)**2)
                 s2_loss = 0.5 * torch.mean((estimated_vocal-vocal)**2)
-
-                # mix_recon_loss = 0.5 * torch.mean((reconstructed_mix-mix)**2)
-                # acc_recon_loss = 0.5 * torch.mean((reconstructed_acc-accompany)**2)
-                # voc_recon_loss = 0.5 * torch.mean((reconstructed_voc-vocal)**2)
-
-                # loss = s1_loss + s2_loss + acc_recon_loss + voc_recon_loss
                 loss = s1_loss + s2_loss
 
                 self.reset_grad()
@@ -112,9 +109,6 @@ class Trainer:
                     'loss/total': loss.item(),
                     'loss/acc': s1_loss.item(),
                     'loss/voc': s2_loss.item(),
-                    # 'loss/mix_rec': mix_recon_loss.item(),
-                    # 'loss/acc_rec': acc_recon_loss.item(),
-                    # 'loss/voc_rec': voc_recon_loss.item(),
                 }
 
                 if (step + 1) % self.log_step == 0:
@@ -164,11 +158,12 @@ class Trainer:
 
             track = torch.from_numpy(components[0]).unsqueeze(0).float()
             track = track.to(self.device)
-            source_pred = estimate_track(self.AttnNet, track, self.input_length)
+            source_pred = estimate_track(self.AttnNet, track,
+                                         self.input_length, self.output_length, context=self.context)
 
             for i, source in enumerate(source_pred):
-                loss += 0.5 * np.sum((np.squeeze(source)-np.squeeze(components[i+1]))**2)/(source.shape[-1]//self.input_length)
-
+                loss += 0.5 * np.mean((np.squeeze(source)-np.squeeze(components[i+1]))**2)
+        loss = loss/len(tracks)
         logs = {
             'valid_loss/total': loss.item()
         }
@@ -181,3 +176,15 @@ class Trainer:
         if self.use_tensorboard:
             for tag, value in logs.items():
                 self.logger.scalar_summary(tag, value, step + 1)
+
+
+if __name__ == '__main__':
+    import soundfile as sf
+    import librosa
+
+    path = '../example/mallory.wav'
+
+    a=librosa.load(path,sr=44100,mono=False)[0]
+    b=sf.read(path)[0]
+
+    c=1
