@@ -205,6 +205,7 @@ class OutputLayer(nn.Module):
 
         self.conv = nn.Conv1d(emb_ch+skip_ch, skip_ch, dec_filter_size, padding=dec_filter_size//2)
         self.centercrop = CenterCrop()
+        self.activation = nn.Tanh()
 
     def forward(self, x, skip, is_sep=True):
 
@@ -216,6 +217,7 @@ class OutputLayer(nn.Module):
         x = torch.cat((skip, x), 1) # channel-wise
 
         x = self.conv(x)
+        x = self.activation(x)
 
         return x, beta
 
