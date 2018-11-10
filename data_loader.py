@@ -44,7 +44,8 @@ class Dataset(data.Dataset):
         accompany = np.pad(accompany, ((0, 0), (self.pad, self.pad)), 'constant', constant_values=((0, 0), (0, 0)))
         vocal = np.pad(vocal, ((0, 0), (self.pad, self.pad)), 'constant', constant_values=((0, 0), (0, 0)))
 
-        start_idx = np.squeeze(np.random.randint(0, length - self.input_length +1, 1))
+        # start_idx = np.squeeze(np.random.randint(0, length - self.input_length +1, 1))
+        start_idx = np.squeeze(np.random.randint(0, length - self.output_length +1, 1))
         end_idx = start_idx + self.input_length
 
         mix = mix[:, start_idx: end_idx]
